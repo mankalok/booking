@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校園場地預約系統</title>
+    <style>
+        :root { --primary: #1a73e8; --secondary: #34a853; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Microsoft JhengHei, sans-serif; background-color: var(--bg); display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { text-align: center; color: var(--primary); margin-bottom: 25px; border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        
+        .section { background: #f1f3f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .section-title { font-weight: bold; color: #5f6368; margin-bottom: 10px; display: block; font-size: 14px; }
+        
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #3c4043; }
+        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        input:focus, select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
+
+        .time-row { display: flex; gap: 10px; }
+        .time-row div { flex: 1; }
+
+        .repeat-box { border: 2px dashed #dadce0; padding: 15px; border-radius: 8px; background: #fff; margin-top: 10px; }
+        .btn-submit { width: 100%; padding: 15px; background-color: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.3s; margin-top: 10px; }
+        .btn-submit:hover { background-color: #1557b0; transform: translateY(-2px); }
+        
+        #status { text-align: center; margin-top: 20px; font-weight: bold; padding: 10px; border-radius: 8px; min-height: 20px; }
+        .loading-dots:after { content: ' .'; animation: dots 1s steps(5, end) infinite; }
+        @keyframes dots { 0%, 20% { color: rgba(0,0,0,0); text-shadow: .2em 0 0 rgba(0,0,0,0), .4em 0 0 rgba(0,0,0,0); } 40% { color: #666; text-shadow: .2em 0 0 rgba(0,0,0,0), .4em 0 0 rgba(0,0,0,0); } 60% { text-shadow: .2em 0 0 #666, .4em 0 0 rgba(0,0,0,0); } 80%, 100% { text-shadow: .2em 0 0 #666, .4em 0 0 #666; } }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🏫 校園場地預約申請</h2>
+    
+    <div class="section">
+        <span class="section-title">基本資訊</span>
+        <label>預約人姓名</label>
+        <input type="text" id="applicant" placeholder="輸入您的姓名">
+        
+        <label>場地地點</label>
+        <select id="location">
+            <option value="">正在載入場地清單...</option>
+        </select>
+
+        <label>預約時段</label>
+        <div class="time-row">
+            <div>
+                <small>開始時間</small>
+                <input type="time" id="startTime" value="09:00">
+            </div>
+            <div>
+                <small>結束時間</small>
+                <input type="time" id="endTime" value="10:30">
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <span class="section-title">日期設置</span>
+        <label>選擇日期</label>
+        <input type="date" id="startDate">
+        
+        <div class="repeat-box">
+            <label style="color:var(--secondary); font-size: 14px;">♻️ 重複預約設定 (選填)</label>
+            <small>結束日期 (留空則為單次)</small>
+            <input type="date" id="repeatEndDate">
+            <small>重複星期幾？</small>
+            <select id="dayOfWeek">
+                <option value="-1">不重複 (單次)</option>
+                <option value="1">星期一</option>
+                <option value="2">星期二</option>
+                <option value="3">星期三</option>
+                <option value="4">星期四</option>
+                <option value="5">星期五</option>
+                <option value="6">星期六</option>
+                <option value="0">星期日</option>
+            </select>
+        </div>
+    </div>
+
+    <label>用途說明</label>
+    <textarea id="purpose" rows="2" placeholder="請輸入預約用途..."></textarea>
+
+    <button class="btn-submit" onclick="processBooking()">提交預約申請</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbw_FOKDndfR3CM3YdvwR_tBcgTd_ianZz8vUgJPD6RacbYGjL4a7lAVqKwKeCKjZK-YEw/exec'; // <--- 請更換為你的新部署網址
+
+    // 1. 頁面載入時，從 Settings 分頁抓取場地
+    window.onload = function() {
+        fetch(scriptURL + '?type=settings')
+            .then(res => res.json())
+            .then(locations => {
+                const select = document.getElementById('location');
+                select.innerHTML = '<option value="">-- 請選擇場地 --</option>';
+                locations.forEach(loc => {
+                    if (loc) {
+                        let opt = document.createElement('option');
+                        opt.value = loc;
+                        opt.innerText = loc;
+                        select.appendChild(opt);
+                    }
+                });
+            })
+            .catch(err => {
+                console.error("載入失敗:", err);
+                document.getElementById('location').innerHTML = '<option value="">無法載入場地</option>';
+            });
+    };
+
+    // 2. 處理預約邏輯
+    async function processBooking() {
+        const applicant = document.getElementById('applicant').value;
+        const location = document.getElementById('location').value;
+        const startTime = document.getElementById('startTime').value;
+        const endTime = document.getElementById('endTime').value;
+        const startDateVal = document.getElementById('startDate').value;
+        const repeatEndVal = document.getElementById('repeatEndDate').value;
+        const dayOfWeek = parseInt(document.getElementById('dayOfWeek').value);
+        const purpose = document.getElementById('purpose').value;
+
+        if (!applicant || !location || !startDateVal) {
+            alert("請完整填寫姓名、場地及開始日期！");
+            return;
+        }
+
+        const timeSlot = `${startTime} - ${endTime}`;
+        let bookings = [];
+
+        // 重複預約邏輯
+        if (repeatEndVal && dayOfWeek !== -1) {
+            let current = new Date(startDateVal);
+            let end = new Date(repeatEndVal);
+            
+            while (current <= end) {
+                if (current.getDay() === dayOfWeek) {
+                    bookings.push({
+                        Applicant: applicant,
+                        Date: current.toISOString().split('T')[0],
+                        Location: location,
+                        Purpose: purpose,
+                        TimeSlot: timeSlot
+                    });
+                }
+                current.setDate(current.getDate() + 1);
+            }
+        } else {
+            // 單次預約
+            bookings.push({
+                Applicant: applicant,
+                Date: startDateVal,
+                Location: location,
+                Purpose: purpose,
+                TimeSlot: timeSlot
+            });
+        }
+
+        if (bookings.length === 0) {
+            alert("在選定期間內找不到符合的星期日期！");
+            return;
+        }
+
+        submitToCloud(bookings);
+    }
+
+    // 3. 提交到 GAS
+    async function submitToCloud(payload) {
+        const status = document.getElementById('status');
+        status.innerText = `正在提交 ${payload.length} 筆預約`;
+        status.className = 'loading-dots';
+        status.style.background = "#fff3cd";
+        status.style.color = "#856404";
+
+        try {
+            await fetch(scriptURL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(payload)
+            });
+            status.innerText = "✅ 預約提交成功！";
+            status.className = '';
+            status.style.background = "#d4edda";
+            status.style.color = "#155724";
+            
+            // 提交成功後清空部分欄位
+            document.getElementById('purpose').value = '';
+        } catch (e) {
+            status.innerText = "❌ 提交失敗，請檢查網路連線";
+            status.className = '';
+            status.style.background = "#f8d7da";
+            status.style.color = "#721c24";
+        }
+    }
+</script>
+</body>
+</html>
