@@ -3,107 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>場地預約實時看板 - 完整說明版</title>
+    <title>場地預約實時看板 - 進階篩選版</title>
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <style>
         :root { --approved-color: #2ecc71; --pending-color: #f39c12; --primary-blue: #1a73e8; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         
-        /* 標題與同步狀態 */
-        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h2 { color: #333; margin: 0; }
-        #syncStatus { font-size: 14px; font-weight: bold; color: var(--primary-blue); }
-
-        /* 篩選與說明區塊 */
-        .control-panel { background: #e8f0fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .filter-row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; flex-wrap: wrap; }
-        select { padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px; outline: none; }
+        /* 篩選面板優化 */
+        .control-panel { background: #e8f0fe; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #d0e1fd; }
+        .filter-group { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; }
+        .filter-item { display: flex; align-items: center; gap: 8px; }
+        select, input { padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
         
-        /* ✨ 顏色說明圖例 (Legend) */
-        .legend-row { display: flex; gap: 20px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #dee2e6; font-size: 14px; }
-        .legend-item { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-        .dot { width: 18px; height: 18px; border-radius: 4px; display: inline-block; }
-        .dot.approved { background: var(--approved-color); }
-        .dot.pending { background: var(--pending-color); }
+        .legend-row { display: flex; gap: 20px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #dee2e6; font-size: 13px; }
+        .dot { width: 14px; height: 14px; border-radius: 3px; display: inline-block; vertical-align: middle; margin-right: 5px; }
 
-        /* 月曆與表格 */
-        #calendar { background: white; padding: 10px; border-radius: 8px; border: 1px solid #eee; height: 650px; margin-bottom: 30px; }
-        .table-container { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        th, td { padding: 14px; border-bottom: 1px solid #eee; text-align: left; }
-        th { background: #f8f9fa; color: #555; font-weight: bold; }
-        
-        /* 狀態標籤樣式 */
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+        #calendar { background: white; padding: 10px; border-radius: 8px; border: 1px solid #eee; height: 600px; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #f8f9fa; }
+        .badge-first { background: #d93025; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        .status-badge { padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
         .bg-approved { background: #d4edda; color: #155724; }
         .bg-pending { background: #fff3cd; color: #856404; }
-        .badge-first { background: #d93025; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h2>📅 場地預約實時看板</h2>
-        <div id="syncStatus">🔄 系統初始化中...</div>
+        <div id="syncStatus" style="font-size:14px; color:var(--primary-blue); font-weight:bold;">初始化中...</div>
     </div>
 
     <div class="control-panel">
-        <div class="filter-row">
-            <strong>📍 選擇場地：</strong>
-            <select id="locFilter" onchange="refreshDisplay()">
-                <option value="all">載入所有場地...</option>
-            </select>
+        <div class="filter-group">
+            <div class="filter-item">
+                <strong>📍 地點篩選：</strong>
+                <select id="locFilter" onchange="refreshDisplay()">
+                    <option value="all">載入中...</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <strong>👤 申請人篩選：</strong>
+                <input type="text" id="nameFilter" placeholder="輸入姓名關鍵字" oninput="refreshDisplay()">
+            </div>
         </div>
         
         <div class="legend-row">
-            <div class="legend-item">
-                <span class="dot approved"></span> 綠色：已核准 (預約成功)
-            </div>
-            <div class="legend-item">
-                <span class="dot pending"></span> 橙色：待核准 (正在申請)
-            </div>
+            <div><span class="dot" style="background:var(--approved-color)"></span>已核准</div>
+            <div><span class="dot" style="background:var(--pending-color)"></span>待核准</div>
+            <div style="color:#666; margin-left:auto;">* 預約清單會根據上方篩選條件自動更新</div>
         </div>
     </div>
 
     <div id="calendar"></div>
 
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0;">
+    <hr>
 
-    <h3>📋 詳細預約名單 (按登記先後排序)</h3>
-    <div class="table-container">
+    <h3>📋 預約清單</h3>
+    <div style="overflow-x:auto;">
         <table id="listTable">
             <thead>
                 <tr>
                     <th>序位</th>
                     <th>日期</th>
                     <th>場地</th>
-                    <th>預約人</th>
+                    <th>申請人</th>
                     <th>時段</th>
-                    <th>審核狀態</th>
+                    <th>狀態</th>
                 </tr>
             </thead>
-            <tbody>
-                </tbody>
+            <tbody></tbody>
         </table>
     </div>
 </div>
 
 <script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbww2t8hXiFGW_Zi71WMOxUYZaom1J8h0FdJ3EsdlyoZg45utiqTVFcHLdfa19_mQsfR/exec'; // <--- ⚠️ 這裡請換成你最新部署的 GAS 網址
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbww2t8hXiFGW_Zi71WMOxUYZaom1J8h0FdJ3EsdlyoZg45utiqTVFcHLdfa19_mQsfR/exec'; // <--- ⚠️ 換成你的 GAS 網址
     let calendar;
     let allMonthData = [];
 
     document.addEventListener('DOMContentLoaded', function() {
-        const calendarEl = document.getElementById('calendar');
-        
-        calendar = new FullCalendar.Calendar(calendarEl, {
+        calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
             initialView: 'dayGridMonth',
             locale: 'zh-tw',
             headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' },
-            // 翻月自動感應抓取資料
             datesSet: function(info) {
                 const date = info.view.currentStart;
                 const monthStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
@@ -114,73 +101,64 @@
         loadSettings();
     });
 
-    // 1. 載入 Settings 分頁的地點
     async function loadSettings() {
         try {
             const res = await fetch(`${scriptURL}?type=settings`);
             const locs = await res.json();
             const sel = document.getElementById('locFilter');
-            sel.innerHTML = '<option value="all">顯示所有場地資料</option>';
-            locs.forEach(l => {
-                sel.innerHTML += `<option value="${l}">${l}</option>`;
-            });
-        } catch (e) { console.error("無法載入場地設定"); }
+            sel.innerHTML = '<option value="all">所有場地</option>';
+            locs.forEach(l => sel.innerHTML += `<option value="${l}">${l}</option>`);
+        } catch(e) { console.error("載入設定失敗"); }
     }
 
-    // 2. 按月份抓取 Bookings 分頁資料
     async function loadData(monthStr) {
-        const status = document.getElementById('syncStatus');
-        status.innerText = `🔄 正在更新 ${monthStr} 資料...`;
-        
+        document.getElementById('syncStatus').innerText = `🔄 同步 ${monthStr} 中...`;
         try {
             const res = await fetch(`${scriptURL}?month=${monthStr}`);
             allMonthData = await res.json();
-            // 排序：確保 Timestamp 最早的排在前面（誰先預約）
             allMonthData.sort((a, b) => new Date(a.Timestamp) - new Date(b.Timestamp));
-            
             refreshDisplay();
-            status.innerText = `✅ ${monthStr} 資料同步成功`;
-        } catch (e) {
-            status.innerText = "❌ 資料讀取失敗";
-        }
+            document.getElementById('syncStatus').innerText = `✅ ${monthStr} 已同步`;
+        } catch (e) { document.getElementById('syncStatus').innerText = "❌ 讀取失敗"; }
     }
 
-    // 3. 渲染月曆與表格
+    // ✨ 核心功能：雙重篩選邏輯
     function refreshDisplay() {
-        const filterLoc = document.getElementById('locFilter').value;
-        const filtered = filterLoc === 'all' 
-            ? allMonthData 
-            : allMonthData.filter(d => String(d.Location).trim() === filterLoc);
+        const locVal = document.getElementById('locFilter').value;
+        const nameVal = document.getElementById('nameFilter').value.toLowerCase();
 
-        // A. 更新月曆
+        // 同時過濾地點與人名
+        const filtered = allMonthData.filter(d => {
+            const matchLoc = (locVal === 'all' || String(d.Location) === locVal);
+            const matchName = (nameVal === '' || String(d.Applicant).toLowerCase().includes(nameVal));
+            return matchLoc && matchName;
+        });
+
+        // 更新月曆
         calendar.removeAllEvents();
         filtered.forEach(d => {
-            const isApproved = (d.Status === 'Approved');
             calendar.addEvent({
-                title: `${isApproved ? '[✅]' : '[⏳]'} ${d.Location}-${d.Applicant}`,
+                title: `${d.Location}-${d.Applicant}`,
                 start: d.Date.split(' ')[0],
-                allDay: true,
-                color: isApproved ? '#2ecc71' : '#f39c12' // 綠色 vs 橙色
+                color: d.Status === 'Approved' ? '#2ecc71' : '#f39c12'
             });
         });
 
-        // B. 更新表格
+        // 更新表格
         const tbody = document.querySelector('#listTable tbody');
         tbody.innerHTML = '';
         filtered.forEach((d, index) => {
-            const isFirst = (index === 0);
             const isApproved = (d.Status === 'Approved');
-            const statusLabel = isApproved ? '✅ 已核准' : '⏳ 待核准';
-            const statusClass = isApproved ? 'bg-approved' : 'bg-pending';
-
             tbody.innerHTML += `
                 <tr>
-                    <td>${isFirst ? '<span class="badge-first">首位</span>' : index + 1}</td>
+                    <td>${index === 0 ? '<span class="badge-first">首位</span>' : index + 1}</td>
                     <td>${d.Date}</td>
                     <td><strong>${d.Location}</strong></td>
                     <td>${d.Applicant}</td>
                     <td>${d.TimeSlot}</td>
-                    <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                    <td><span class="status-badge ${isApproved ? 'bg-approved' : 'bg-pending'}">
+                        ${isApproved ? '已核准' : '待核准'}
+                    </span></td>
                 </tr>
             `;
         });
