@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>設施預約系統</title>
+
+    <style>
+
+        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 20px; }
+
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+
+        .hidden { display: none; }
+
+        .repeat-box { background: #fff9db; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #ffec99; }
+
+        label { display: block; margin: 12px 0 5px; font-weight: bold; font-size: 14px; }
+
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+
+        .btn { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        .day-flex { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
+
+        .day-flex label { font-weight: normal; margin: 0; display: flex; align-items: center; gap: 4px; }
+
+        .day-flex input { width: auto; }
+
+    </style>
+
+</head>
+
+<body>
+
+
+
+<div class="card">
+
+    <h2 id="title">📅 設施預約</h2>
+
+    
+
+    <div id="loginForm">
+
+        <label>帳號</label><input type="text" id="user">
+
+        <label>密碼</label><input type="password" id="pass">
+
+        <button class="btn" onclick="login()">登入</button>
+
+    </div>
+
+
+
+    <div id="bookingForm" class="hidden">
+
+        <p>👤 申請人：<b id="userName"></b></p>
+
+        
+
+        <label>預約地點</label>
+
+        <select id="location"></select>
+
+
+
+        <label>預約日期</label>
+
+        <input type="date" id="startDate" onchange="syncEndDate()">
+
+
+
+        <label style="display:inline-flex; align-items:center; cursor:pointer; margin-top:15px;">
+
+            <input type="checkbox" id="isRepeat" style="width:auto; margin-right:8px;" onchange="toggleRepeat()"> 
+
+            ♻️ 重複預約 (選填)
+
+        </label>
+
+
+
+        <div id="repeatSection" class="hidden repeat-box">
+
+            <label>重複結束日期</label>
+
+            <input type="date" id="endDate">
+
+            
+
+            <label>重複星期幾</label>
+
+            <div class="day-flex">
+
+                <label><input type="checkbox" name="days" value="1">一</label>
+
+                <label><input type="checkbox" name="days" value="2">二</label>
+
+                <label><input type="checkbox" name="days" value="3">三</label>
+
+                <label><input type="checkbox" name="days" value="4">四</label>
+
+                <label><input type="checkbox" name="days" value="5">五</label>
+
+                <label><input type="checkbox" name="days" value="6">六</label>
+
+                <label><input type="checkbox" name="days" value="0">日</label>
+
+            </div>
+
+        </div>
+
+
+
+        <div style="display:flex; gap:10px;">
+
+            <div style="flex:1;"><label>開始時間</label><input type="time" id="startTime" value="09:00"></div>
+
+            <div style="flex:1;"><label>結束時間</label><input type="time" id="endTime" value="11:00"></div>
+
+        </div>
+
+
+
+        <label>預約用途</label>
+
+        <textarea id="purpose" rows="2"></textarea>
+
+
+
+        <button class="btn" id="submitBtn" onclick="submitData()">提交申請</button>
+
+        <p id="msg" style="font-size:13px; color:blue;"></p>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+    const url = "https://script.google.com/macros/s/AKfycbxvMSt5k0g_oH2WTPaiZQiP6HJY5jPa1PzdRgrOLY1cvG_vJRg8MZ-VdkYAJW50iAC9/exec";
+
+    let currentUser = "";
+
+
+
+    function toggleRepeat() {
+
+        const isRepeat = document.getElementById('isRepeat').checked;
+
+        document.getElementById('repeatSection').classList.toggle('hidden', !isRepeat);
+
+        if(!isRepeat) {
+
+            document.getElementById('endDate').value = document.getElementById('startDate').value;
+
+        }
+
+    }
+
+
+
+    function syncEndDate() {
+
+        if(!document.getElementById('isRepeat').checked) {
+
+            document.getElementById('endDate').value = document.getElementById('startDate').value;
+
+        }
+
+    }
+
+
+
+    async function login() {
+
+        const u = document.getElementById('user').value;
+
+        const p = document.getElementById('pass').value;
+
+        const res = await fetch(`${url}?action=login&user=${u}&pass=${p}`).then(r => r.json());
+
+        if(res.success) {
+
+            currentUser = res.displayName;
+
+            document.getElementById('userName').innerText = currentUser;
+
+            document.getElementById('loginForm').classList.add('hidden');
+
+            document.getElementById('bookingForm').classList.remove('hidden');
+
+            loadLocs();
+
+        } else { alert("登入失敗"); }
+
+    }
+
+
+
+    async function loadLocs() {
+
+        const locs = await fetch(`${url}?action=getSettings`).then(r => r.json());
+
+        document.getElementById('location').innerHTML = locs.map(l => `<option value="${l}">${l}</option>`).join('');
+
+    }
+
+
+
+    async function submitData() {
+
+        const btn = document.getElementById('submitBtn');
+
+        const msg = document.getElementById('msg');
+
+        
+
+        // 準備星期幾
+
+        let days = [];
+
+        if(document.getElementById('isRepeat').checked) {
+
+            days = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(c => parseInt(c.value));
+
+            if(days.length === 0) return alert("請勾選重複星期");
+
+        } else {
+
+            // 單次預約，自動抓取當天是星期幾
+
+            const d = new Date(document.getElementById('startDate').value);
+
+            days = [d.getDay()];
+
+        }
+
+
+
+        const payload = {
+
+            Applicant: currentUser,
+
+            Location: document.getElementById('location').value,
+
+            startDate: document.getElementById('startDate').value,
+
+            endDate: document.getElementById('endDate').value || document.getElementById('startDate').value,
+
+            startTime: document.getElementById('startTime').value,
+
+            endTime: document.getElementById('endTime').value,
+
+            repeatDays: days,
+
+            Purpose: document.getElementById('purpose').value
+
+        };
+
+
+
+        btn.disabled = true;
+
+        msg.innerText = "⏳ 正在檢查衝突並寫入...";
+
+
+
+        try {
+
+            const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.text());
+
+            msg.innerText = res;
+
+            if(res.includes("成功")) { alert(res); }
+
+        } catch(e) {
+
+            msg.innerText = "❌ 連線錯誤";
+
+        } finally {
+
+            btn.disabled = false;
+
+        }
+
+    }
+
+</script>
+
+</body>
+
+</html>
