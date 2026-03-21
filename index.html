@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設施預約整合系統</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden; /* 防止主視窗出現雙捲軸 */
+            font-family: sans-serif;
+        }
+
+        /* 容器設定 */
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* 上方區域：預約申請 (Booking) */
+        .top-panel {
+            flex: 1; /* 佔用一半空間 */
+            border-bottom: 5px solid #1a73e8;
+            position: relative;
+        }
+
+        /* 下方區域：看板顯示 (Viewer) */
+        .bottom-panel {
+            flex: 1; /* 佔用另一半空間 */
+            background: #f8f9fa;
+        }
+
+        /* iframe 設定 */
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* 標籤裝飾 */
+        .label {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: rgba(26, 115, 232, 0.8);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-panel">
+        <div class="label">📝 預約申請表單</div>
+        <iframe src="booking.html"></iframe>
+    </div>
+
+    <div class="bottom-panel">
+        <div class="label">📅 即時預約看板</div>
+        <iframe src="Viewer.html"></iframe>
+    </div>
+</div>
+
+</body>
+</html>
