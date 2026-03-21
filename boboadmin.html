@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設施預約管理系統 - 總控制台</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --success: #34a853;
+            --warning: #fbbc05;
+            --bg: #f8f9fa;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang HK', sans-serif;
+            background: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .dashboard {
+            text-align: center;
+            max-width: 1000px;
+            padding: 20px;
+        }
+        h1 { color: #3c4043; margin-bottom: 40px; font-size: 2.5rem; }
+        .menu-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+        .menu-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            text-decoration: none;
+            color: #3c4043;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 2px solid transparent;
+        }
+        .menu-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            border-color: var(--primary);
+        }
+        .icon {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+        .c1 { color: var(--primary); }
+        .c2 { color: var(--success); }
+        .c3 { color: #722ed1; }
+        
+        .menu-card h2 { margin: 10px 0; font-size: 1.5rem; }
+        .menu-card p { color: #70757a; font-size: 0.95rem; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h1><i class="fas fa-hotel"></i> 設施預約管理系統</h1>
+    <div class="menu-container">
+        <a href="combine.html" class="menu-card">
+            <i class="fas fa-calendar-check icon c1"></i>
+            <h2>預約及即時看板</h2>
+            <p>用戶進行預約申請，並即時查看場地佔用狀況月曆。</p>
+        </a>
+
+        <a href="booking_admin.html" class="menu-card">
+            <i class="fas fa-tasks icon c2"></i>
+            <h2>預約審批後台</h2>
+            <p>管理員專用：批核新申請、處理重複預約及匯出數據。</p>
+        </a>
+
+        <a href="manager.html" class="menu-card">
+            <i class="fas fa-user-cog icon c3"></i>
+            <h2>場地及用戶管理</h2>
+            <p>設定場地地點、樓層及管理系統用戶登入權限。</p>
+        </a>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系統管理後台 (進階版)</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root { 
+      --primary: #4285f4; --success: #34a853; --danger: #ea4335; 
+      --warning: #fbbc05; --info: #17a2b8; --bg: #f0f2f5; --text: #3c4043;
+    }
+    
+    body { font-family: 'Segoe UI', 'PingFang HK', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--text); }
+    .container { max-width: 1000px; margin: auto; }
+
+    /* Tab 導覽 */
+    .tab-container { display: flex; gap: 15px; margin-bottom: 25px; justify-content: center; }
+    .tab { 
+      padding: 15px 35px; cursor: pointer; background: white; border-radius: 50px; 
+      font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s;
+      color: #5f6368; border: none;
+    }
+    .tab.active { background: var(--primary); color: white; transform: translateY(-3px); box-shadow: 0 6px 12px rgba(66,133,244,0.3); }
+
+    /* 卡片內容 */
+    .card { background: white; border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: none; }
+    .card.active { display: block; animation: slideUp 0.4s ease; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #f1f3f4; padding-bottom: 15px; }
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* 按鈕樣式 */
+    .btn { padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; color: white; font-size: 14px; }
+    .btn-add { background: var(--success); }
+    .btn-csv-in { background: var(--warning); color: #3c4043; }
+    .btn-csv-out { background: #6c757d; }
+    .btn-save { background: var(--primary); width: 100%; margin-top: 30px; padding: 18px; font-size: 1.1rem; justify-content: center; }
+    .btn:hover { opacity: 0.9; transform: scale(1.03); }
+
+    /* 表格設計 */
+    table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+    th { padding: 10px 15px; text-align: left; color: #80868b; text-transform: uppercase; font-size: 0.8rem; }
+    tr.row-item { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: 0.2s; }
+    td { padding: 12px 15px; border-top: 1px solid #f1f3f4; border-bottom: 1px solid #f1f3f4; }
+    td:first-child { border-left: 1px solid #f1f3f4; border-radius: 12px 0 0 12px; }
+    td:last-child { border-right: 1px solid #f1f3f4; border-radius: 0 12px 12px 0; }
+
+    /* 輸入框 */
+    input { width: 90%; padding: 10px 12px; border: 2px solid #f1f3f4; border-radius: 8px; outline: none; transition: 0.3s; font-size: 14px; }
+    input:focus { border-color: var(--primary); background: #fff; }
+
+    /* 操作單元格 */
+    .action-cell { display: flex; align-items: center; gap: 12px; justify-content: center; }
+    .sort-btns { display: flex; flex-direction: column; gap: 2px; }
+    .btn-small { padding: 4px 6px; font-size: 10px; background: #eee; border: none; border-radius: 4px; cursor: pointer; color: #666; }
+    .btn-small:hover { background: var(--primary); color: white; }
+    
+    .btn-copy { color: var(--info); cursor: pointer; font-size: 18px; }
+    .btn-copy:hover { color: #0d6efd; transform: scale(1.2); }
+    
+    .btn-remove { color: var(--danger); cursor: pointer; font-size: 18px; }
+    .btn-remove:hover { color: #b71c1c; transform: scale(1.2); }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="tab-container">
+    <button class="tab active" onclick="switchTab('settings')"><i class="fas fa-map-marked-alt"></i> 場地管理</button>
+    <button class="tab" onclick="switchTab('users')"><i class="fas fa-users-cog"></i> 用戶權限</button>
+  </div>
+
+  <div id="settingsCard" class="card active">
+    <div class="header-row">
+      <h2>🏢 地點與樓層設定</h2>
+      <div class="btn-group">
+        <button class="btn btn-csv-out" onclick="exportToCSV('locationList', 'Locations_Backup.csv')"><i class="fas fa-file-export"></i> 匯出 CSV</button>
+        <button class="btn btn-csv-in" onclick="document.getElementById('csvLoc').click()"><i class="fas fa-file-import"></i> 匯入 CSV</button>
+        <button class="btn btn-add" onclick="addLocationRow()"><i class="fas fa-plus"></i> 新增場地</button>
+      </div>
+    </div>
+    <input type="file" id="csvLoc" hidden accept=".csv" onchange="handleCSV(this)">
+    
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 40%;">地點名稱 (Location)</th>
+          <th style="width: 30%;">樓層 (Floor)</th>
+          <th style="text-align: center;">操作 (排序 / 複製 / 刪除)</th>
+        </tr>
+      </thead>
+      <tbody id="locationList"></tbody>
+    </table>
+    <button class="btn btn-save" onclick="saveData('saveSettings', 'locationList')"><i class="fas fa-cloud-upload-alt"></i> 儲存所有變更到 Google Sheets</button>
+  </div>
+
+  <div id="usersCard" class="card">
+    <div class="header-row">
+      <h2>👥 用戶名單管理</h2>
+      <div class="btn-group">
+        <button class="btn btn-csv-out" onclick="exportToCSV('userList', 'Users_Backup.csv')"><i class="fas fa-file-export"></i> 匯出 CSV</button>
+        <button class="btn btn-add" onclick="addUserRow()"><i class="fas fa-user-plus"></i> 新增用戶</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>用戶名</th>
+          <th>密碼</th>
+          <th>顯示名稱</th>
+          <th style="text-align: center;">操作</th>
+        </tr>
+      </thead>
+      <tbody id="userList"></tbody>
+    </table>
+    <button class="btn btn-save" onclick="saveData('saveUsers', 'userList')"><i class="fas fa-user-shield"></i> 更新用戶資料</button>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzt85MIuhL6uYh2UkiFW-3QJbJflq66VfNLBjWOI99T3QHAy6vspc5_DFtGGbI2BNQf/exec"; // ⚠️ 替換為你的網址
+
+  window.onload = loadInitialData;
+
+  async function loadInitialData() {
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getSettings`);
+      const locs = await res.json();
+      locs.forEach(r => addLocationRow(r[0], r[1]));
+
+      const resU = await fetch(`${SCRIPT_URL}?action=getUsers`);
+      const users = await resU.json();
+      users.forEach(r => addUserRow(r[0], r[1], r[2]));
+    } catch(e) { console.log("載入失敗"); }
+  }
+
+  function switchTab(type) {
+    document.querySelectorAll('.tab, .card').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById(type + 'Card').classList.add('active');
+  }
+
+  // --- 場地行功能 ---
+  function addLocationRow(loc = '', floor = '') {
+    const tbody = document.getElementById('locationList');
+    const tr = document.createElement('tr');
+    tr.className = "row-item";
+    tr.innerHTML = `
+      <td><input type="text" value="${loc}" placeholder="地點"></td>
+      <td><input type="text" value="${floor}" placeholder="樓層"></td>
+      <td class="action-cell">
+        <div class="sort-btns">
+          <button class="btn-sort btn-small" onclick="moveRow(this, 'up')">▲</button>
+          <button class="btn-sort btn-small" onclick="moveRow(this, 'down')">▼</button>
+        </div>
+        <i class="fas fa-copy btn-copy" title="複製此行" onclick="copyRow(this)"></i>
+        <i class="fas fa-trash-alt btn-remove" title="刪除" onclick="this.closest('tr').remove()"></i>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // 複製行功能
+  function copyRow(btn) {
+    const row = btn.closest('tr');
+    const loc = row.querySelectorAll('input')[0].value;
+    const floor = row.querySelectorAll('input')[1].value;
+    
+    // 在當前行後面插入複製的行
+    const newTr = document.createElement('tr');
+    newTr.className = "row-item";
+    newTr.innerHTML = row.innerHTML;
+    // 必須重新填入數值，因為 innerHTML 不會帶走 input 的當前值
+    newTr.querySelectorAll('input')[0].value = loc;
+    newTr.querySelectorAll('input')[1].value = floor;
+    
+    row.parentNode.insertBefore(newTr, row.nextSibling);
+    // 加上一個閃爍效果提醒用戶
+    newTr.style.background = "#e8f0fe";
+    setTimeout(() => newTr.style.background = "#fff", 500);
+  }
+
+  // --- 用戶行功能 ---
+  function addUserRow(u='', p='', n='') {
+    const html = `
+      <tr class="row-item">
+        <td><input type="text" value="${u}"></td>
+        <td><input type="password" value="${p}" onfocus="this.type='text'" onblur="this.type='password'"></td>
+        <td><input type="text" value="${n}"></td>
+        <td class="action-cell">
+          <i class="fas fa-trash-alt btn-remove" onclick="this.closest('tr').remove()"></i>
+        </td>
+      </tr>`;
+    document.getElementById('userList').insertAdjacentHTML('beforeend', html);
+  }
+
+  // 排序
+  function moveRow(btn, dir) {
+    const row = btn.closest('tr');
+    if (dir === 'up') {
+      const prev = row.previousElementSibling;
+      if (prev) row.parentNode.insertBefore(row, prev);
+    } else {
+      const next = row.nextElementSibling;
+      if (next) row.parentNode.insertBefore(next, row);
+    }
+  }
+
+  // 匯出 CSV 功能
+  function exportToCSV(tableId, filename) {
+    const rows = Array.from(document.querySelectorAll(`#${tableId} tr`));
+    let csvContent = "\uFEFF"; // 加入 BOM 確保 Excel 顯示中文正常
+    
+    rows.forEach(tr => {
+      const inputs = Array.from(tr.querySelectorAll('input'));
+      const rowData = inputs.map(i => `"${i.value.replace(/"/g, '""')}"`).join(",");
+      csvContent += rowData + "\r\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // 匯入 CSV
+  function handleCSV(input) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rows = e.target.result.split('\n').filter(r => r.trim());
+      rows.forEach((row, i) => {
+        if(i === 0 && row.toLowerCase().includes('location')) return;
+        const cols = row.split(',').map(c => c.replace(/^"|"$/g, '').trim());
+        if(cols.length >= 2) addLocationRow(cols[0], cols[1]);
+      });
+    };
+    reader.readAsText(input.files[0]);
+  }
+
+  // 儲存到 GAS
+  async function saveData(action, tableId) {
+    const btn = event.currentTarget;
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在上傳...';
+
+    const data = Array.from(document.querySelectorAll(`#${tableId} tr`))
+                      .map(tr => Array.from(tr.querySelectorAll('input')).map(i => i.value));
+
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: action, data: data })
+      });
+      alert(await res.text());
+    } catch (e) { alert("儲存失敗！"); }
+    
+    btn.disabled = false;
+    btn.innerHTML = oldHtml;
+  }
+</script>
+</body>
+</html>

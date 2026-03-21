@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>進階設施管理 - 深度美化版</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #1890ff; --success: #52c41a; --danger: #ff4d4f; 
+            --warning: #faad14; --bg: #f0f2f5; --card-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        body { font-family: 'Segoe UI', 'PingFang HK', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1260px; margin: auto; }
+
+        /* 頂部工具欄 - 懸浮感 */
+        .toolbar { 
+            background: white; padding: 20px; border-radius: 12px; 
+            box-shadow: var(--card-shadow); display: flex; flex-wrap: wrap; 
+            gap: 20px; align-items: flex-end; margin-bottom: 25px;
+            border: 1px solid #e8e8e8;
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 8px; }
+        .filter-group label { font-size: 13px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        select, input { 
+            padding: 10px 14px; border: 1px solid #d9d9d9; border-radius: 8px; 
+            min-width: 150px; background: #fafafa; transition: 0.3s;
+        }
+        select:focus, input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+
+        /* 表格容器 */
+        .table-card { background: transparent; border-radius: 12px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0 8px; } /* 關鍵：行與行之間有間距 */
+        
+        th { padding: 12px 15px; text-align: left; font-size: 13px; color: #888; text-transform: uppercase; border: none; }
+        
+        /* 每一行變成獨立卡片 */
+        tr.row-item { 
+            background: white; 
+            box-shadow: var(--card-shadow);
+            transition: 0.2s;
+        }
+        /* 間條色彩效果 */
+        tr.row-item:nth-child(even) { background: #fafbfc; }
+        
+        tr.row-item:hover { transform: scale(1.005); box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; }
+        
+        td { padding: 16px 15px; border: none; }
+        td:first-child { border-radius: 10px 0 0 10px; border-left: 4px solid transparent; }
+        td:last-child { border-radius: 0 10px 10px 0; }
+
+        /* 狀態色彩條 */
+        tr.row-item.approved-row td:first-child { border-left-color: var(--success); }
+        tr.row-item.pending-row td:first-child { border-left-color: var(--warning); }
+
+        /* 🔴 衝突行 - 強烈警示樣式 */
+        tr.row-item.conflict-row { 
+            background: #fff1f0 !important; 
+            border: 1px solid var(--danger);
+        }
+        tr.row-item.conflict-row td { color: #820014; }
+        tr.row-item.conflict-row td:first-child { border-left: 6px solid var(--danger); }
+        .conflict-text { 
+            background: var(--danger); color: white; padding: 2px 8px; 
+            border-radius: 4px; font-size: 11px; font-weight: bold;
+            display: inline-block; margin-top: 5px; animation: blink 1.5s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0.6; } }
+
+        /* 樓層標籤 */
+        .floor-tag { background: #1890ff; color: white; padding: 3px 10px; border-radius: 6px; font-weight: 700; font-size: 11px; }
+        .loc-text { font-weight: 600; color: #222; margin-left: 8px; font-size: 15px; }
+        .applicant-name { font-weight: 600; color: #444; }
+        .date-text { font-family: 'Courier New', monospace; font-weight: bold; color: #1890ff; }
+
+        /* 操作按鈕 */
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-refresh { background: var(--primary); color: white; }
+        .btn-csv { background: #597ef7; color: white; }
+        .btn-ok { background: var(--success); color: white; }
+        .btn-del { background: var(--danger); color: white; }
+        .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        .loading-overlay { text-align: center; padding: 60px; background: white; border-radius: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="toolbar">
+        <div class="filter-group">
+            <label><i class="far fa-calendar-alt"></i> 月份篩選</label>
+            <input type="month" id="monthFilter" onchange="render()">
+        </div>
+        <div class="filter-group">
+            <label><i class="fas fa-layer-group"></i> 樓層</label>
+            <select id="floorFilter" onchange="render()"><option value="all">所有樓層</option></select>
+        </div>
+        <div class="filter-group">
+            <label><i class="fas fa-map-marker-alt"></i> 地點</label>
+            <select id="locFilter" onchange="render()"><option value="all">所有場地</option></select>
+        </div>
+        <div class="filter-group">
+            <label><i class="fas fa-check-circle"></i> 狀態</label>
+            <select id="statusFilter" onchange="render()">
+                <option value="all">所有狀態</option>
+                <option value="Pending">🕒 待批核</option>
+                <option value="Approved">✅ 已核准</option>
+            </select>
+        </div>
+        <div style="margin-left: auto; display: flex; gap: 12px;">
+            <button class="btn btn-refresh" onclick="load()"><i class="fas fa-sync-alt"></i> 刷新</button>
+            <button class="btn btn-csv" onclick="exportCSV()"><i class="fas fa-file-csv"></i> 匯出 CSV</button>
+            <button class="btn btn-ok" onclick="bulk('Approved')"><i class="fas fa-check"></i> 批量批核</button>
+            <button class="btn btn-del" onclick="bulk('Deleted')"><i class="fas fa-trash"></i> 批量刪除</button>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40px;"><input type="checkbox" onclick="checkAll(this)"></th>
+                    <th style="width: 110px;">日期</th>
+                    <th>地點與樓層</th>
+                    <th>申請人</th>
+                    <th style="width: 200px;">預約時段</th>
+                    <th style="width: 110px;">狀態</th>
+                    <th style="width: 150px;">系統提醒</th>
+                </tr>
+            </thead>
+            <tbody id="mainTable">
+                <tr><td colspan="7" class="loading-overlay">請按刷新載入數據...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzt85MIuhL6uYh2UkiFW-3QJbJflq66VfNLBjWOI99T3QHAy6vspc5_DFtGGbI2BNQf/exec'; 
+    let bookingData = [];
+    let floorMap = {};
+
+    async function load() {
+        const body = document.getElementById('mainTable');
+        body.innerHTML = '<tr><td colspan="7" class="loading-overlay"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>正在獲取最新雲端數據...</td></tr>';
+        try {
+            const [resBooking, resSettings] = await Promise.all([
+                fetch(`${scriptURL}?action=getAdminData`).then(r => r.json()),
+                fetch(`${scriptURL}?action=getSettings`).then(r => r.json())
+            ]);
+            bookingData = resBooking;
+            floorMap = {};
+            resSettings.forEach(row => { if(row[0]) floorMap[row[0]] = row[1] || 'N/A'; });
+            bookingData.sort((a, b) => a[1].localeCompare(b[1]) || a[3].localeCompare(b[3]));
+            updateFilters(resSettings);
+            render();
+        } catch(e) {
+            body.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red; padding:40px;">⚠️ 載入失敗，請確認 API 網址是否正確。</td></tr>';
+        }
+    }
+
+    function updateFilters(settings) {
+        const floors = [...new Set(settings.map(r => r[1]).filter(f => f))].sort();
+        const locs = [...new Set(settings.map(r => r[0]).filter(l => l))].sort();
+        document.getElementById('floorFilter').innerHTML = '<option value="all">所有樓層</option>' + floors.map(f => `<option value="${f}">${f}</option>`).join('');
+        document.getElementById('locFilter').innerHTML = '<option value="all">所有場地</option>' + locs.map(l => `<option value="${l}">${l}</option>`).join('');
+    }
+
+    function render() {
+        const body = document.getElementById('mainTable');
+        const mF = document.getElementById('monthFilter').value;
+        const fF = document.getElementById('floorFilter').value;
+        const lF = document.getElementById('locFilter').value;
+        const sF = document.getElementById('statusFilter').value;
+        body.innerHTML = '';
+
+        const counter = {};
+        bookingData.forEach(r => {
+            if(r[7] === 'Deleted') return;
+            const k = `${r[1]}|${r[3]}|${r[5]}`;
+            counter[k] = (counter[k] || 0) + 1;
+        });
+
+        const filtered = bookingData.filter(r => {
+            const floorName = floorMap[r[3]] || '';
+            return (!mF || r[1].startsWith(mF)) && (fF === 'all' || floorName === fF) && (lF === 'all' || r[3] === lF) && (sF === 'all' || r[7] === sF);
+        });
+
+        if (filtered.length === 0) {
+            body.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:50px; color:#999; background:white; border-radius:12px;">🚫 冇搵到對應嘅預約資料</td></tr>';
+            return;
+        }
+
+        filtered.forEach(r => {
+            const locName = r[3];
+            const floorName = floorMap[locName] || '---';
+            const isConflict = counter[`${r[1]}|${r[3]}|${r[5]}`] > 1 && r[7] !== 'Deleted';
+            const statusClass = r[7] === 'Approved' ? 'approved-row' : 'pending-row';
+            
+            const tr = document.createElement('tr');
+            tr.className = `row-item ${statusClass} ${isConflict ? 'conflict-row' : ''}`;
+            
+            tr.innerHTML = `
+                <td><input type="checkbox" class="rowBox" value="${r[8]}"></td>
+                <td class="date-text">${r[1]}</td>
+                <td>
+                    <span class="floor-tag">${floorName}</span>
+                    <span class="loc-text">${locName}</span>
+                </td>
+                <td class="applicant-name"><i class="far fa-user"></i> ${r[2]}</td>
+                <td style="color:#555; font-weight:500;"><i class="far fa-clock"></i> ${r[5]}</td>
+                <td><span class="status-badge status-${r[7].toLowerCase()}">${r[7]}</span></td>
+                <td>
+                    ${isConflict ? '<span class="conflict-text">⚠️ 發現重複預約</span>' : '<span style="color:#52c41a; font-weight:bold;">✓ 正常</span>'}
+                </td>
+            `;
+            body.appendChild(tr);
+        });
+        window.currentExport = filtered;
+    }
+
+    function exportCSV() {
+        if (!window.currentExport || window.currentExport.length === 0) return alert("冇數據匯出");
+        let csv = "\uFEFF日期,樓層,地點,申請人,時段,狀態\n";
+        window.currentExport.forEach(r => { csv += `${r[1]},${floorMap[r[3]] || ''},${r[3]},${r[2]},${r[5]},${r[7]}\n`; });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `Booking_Report_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+    }
+
+    async function bulk(status) {
+        const ids = Array.from(document.querySelectorAll('.rowBox:checked')).map(b => b.value);
+        if (!ids.length) return alert("請先勾選項目");
+        if (!confirm(`確定要對 ${ids.length} 項進行 ${status} 操作？`)) return;
+        const btn = event.currentTarget;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+        await fetch(scriptURL, { method: 'POST', body: JSON.stringify({ action: 'bulkUpdate', ids: ids, status: status }) });
+        load();
+    }
+
+    function checkAll(src) { document.querySelectorAll('.rowBox').forEach(b => b.checked = src.checked); }
+
+    load();
+</script>
+
+</body>
+</html>
